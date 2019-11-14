@@ -92,10 +92,8 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
     cr_drive_inst = cr_drive_inst[0]  # active cancellation tone
     cr_control_inst = cr_control_inst[0]  # driving of control qubit at target's frequency
     
-    if theta > np.pi:
+    if theta > 2 * np.pi:
         theta -= 2 * np.pi
-        
-    print(cr_control_inst.command.samples)
 
     cr_drive_samples = cr_drive_inst.command.samples * (theta / (np.pi / 2))
     cr_control_samples = cr_control_inst.command.samples * (theta / (np.pi / 2))
