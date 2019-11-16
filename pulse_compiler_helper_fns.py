@@ -114,6 +114,11 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
     area_under_curve += sum(map(np.real, cr_control_inst.command.samples[flat_end+1:]))
     flat_duration = (target_area_under_curve - area_under_curve) / np.real(cr_control_inst.command.samples[flat_start])
     flat_duration = int(flat_duration + 0.5)
+    duration = len(cr_drive_inst.command.samples[:flat_start]) + flat_duration + len(cr_drive_inst.command.samples[flat_end+1:])
+    if duration % 16 <= 8 and flat_duration > 8:
+        flat_duration -= duration % 16
+    else:
+        flat_duration += 16 - (duration % 16)
 
     cr_drive_samples = np.concatenate([
         cr_drive_inst.command.samples[:flat_start],
@@ -126,6 +131,9 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
         [cr_control_inst.command.samples[flat_start]] * flat_duration,
         cr_control_inst.command.samples[flat_end+1:]
     ])
+
+    assert len(cr_drive_samples) % 16 == 0
+    assert len(cr_control_samples) % 16 == 0
     
     cr_p_schedule = q.pulse.SamplePulse(cr_drive_samples)(cr_drive_inst.channels[0]) | q.pulse.SamplePulse(
         cr_control_samples)(cr_control_inst.channels[0])
