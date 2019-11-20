@@ -15,6 +15,19 @@ def update_basis_gates_and_cmd_def(decomposed_circuit, backend, system, cmd_def)
                 schedule = get_direct_rx_schedule(theta, qargs[0].index, cmd_def, system)
                 cmd_def.add(instruction.name, qubits=[qargs[0].index], schedule=schedule)
 
+        elif instruction.name.startswith('cr'):
+            if instruction.name not in basis_gates:
+                basis_gates.append(instruction.name)
+
+            if not cmd_def.has(instruction.name, qubits=[qargs[0].index, qargs[1].index]):
+                theta = float(instruction.name[len('cr_'):])
+                schedule = get_cr_schedule(theta, qargs[0].index, qargs[1].index, cmd_def, system)
+                cmd_def.add(instruction.name,
+                            qubits=[qargs[0].index, qargs[1].index], schedule=schedule)
+
+        else:
+            assert False, 'unrecognized instruction %s' % instruction
+
 
 def rescale_samples(samples, scale_factor, method='rescale_height'):
     assert scale_factor <= 1, 'only tested for scaling down pulses'
