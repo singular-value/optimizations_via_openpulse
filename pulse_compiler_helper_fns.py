@@ -25,6 +25,10 @@ def update_basis_gates_and_cmd_def(decomposed_circuit, backend, system, cmd_def)
                 cmd_def.add(instruction.name,
                             qubits=[qargs[0].index, qargs[1].index], schedule=schedule)
 
+        elif instruction.name == 'open_cx':
+            if instruction.name not in basis_gates:
+                basis_gates.append(instruction.name)
+
 
 def rescale_samples(samples, scale_factor, method='rescale_height'):
     assert scale_factor <= 1, 'only tested for scaling down pulses'
