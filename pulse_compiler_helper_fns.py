@@ -89,6 +89,7 @@ def get_direct_rx_schedule(theta, qubit_index, cmd_def, system):
 
 
 def get_cr_schedule(theta, control, target, cmd_def, system):
+
     """Returns schedule for a cross-resonance pulse between control and target.
     Does a RX(-theta) on target if control is |0> and a RX(theta) on target if
     control is |1>.
@@ -109,9 +110,52 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
     if theta > 2 * np.pi:
         theta -= 2 * np.pi
 
-    cr_drive_samples = cr_drive_inst.command.samples * (theta / (np.pi / 2))
-    cr_control_samples = cr_control_inst.command.samples * (theta / (np.pi / 2))
+    full_area_under_curve = sum(map(np.real, cr_control_inst.command.samples))
+    target_area_under_curve = full_area_under_curve * (theta / (np.pi / 2))
 
+    # CR pulse samples have gaussian rise, flattop, and then gaussian fall.
+    # we want to find the start and end indices of the flattop
+    flat_start = 0
+    while cr_drive_inst.command.samples[flat_start] != cr_drive_inst.command.samples[flat_start + 1]:
+        flat_start += 1
+    assert cr_control_inst.command.samples[flat_start] == cr_control_inst.command.samples[flat_start + 1]
+
+    flat_end = flat_start + 1
+    while cr_drive_inst.command.samples[flat_end] == cr_drive_inst.command.samples[flat_end + 1]:
+        flat_end += 1
+    assert cr_control_inst.command.samples[flat_end] == cr_control_inst.command.samples[flat_end - 1]
+
+    area_under_curve = sum(map(np.real, cr_control_inst.command.samples[:flat_start]))
+    area_under_curve += sum(map(np.real, cr_control_inst.command.samples[flat_end+1:]))
+    flat_duration = (target_area_under_curve - area_under_curve) / np.real(cr_control_inst.command.samples[flat_start])
+    flat_duration = max(0, int(flat_duration + 0.5))
+    duration = len(cr_drive_inst.command.samples[:flat_start]) + flat_duration + len(cr_drive_inst.command.samples[flat_end+1:])
+    if duration % 16 <= 8 and flat_duration > 8:
+        flat_duration -= duration % 16
+    else:
+        flat_duration += 16 - (duration % 16)
+
+    cr_drive_samples = np.concatenate([
+        cr_drive_inst.command.samples[:flat_start],
+        [cr_drive_inst.command.samples[flat_start]] * flat_duration,
+        cr_drive_inst.command.samples[flat_end+1:]
+    ])
+
+    cr_control_samples = np.concatenate([
+        cr_control_inst.command.samples[:flat_start],
+        [cr_control_inst.command.samples[flat_start]] * flat_duration,
+        cr_control_inst.command.samples[flat_end+1:]
+    ])
+
+    assert len(cr_drive_samples) % 16 == 0
+    assert len(cr_control_samples) % 16 == 0
+
+    current_area_under_curve = sum(map(np.real, cr_control_samples))
+    scaling_factor = target_area_under_curve / current_area_under_curve
+
+    cr_drive_samples *= scaling_factor
+    cr_control_samples *= scaling_factor
+    
     cr_p_schedule = q.pulse.SamplePulse(cr_drive_samples)(cr_drive_inst.channels[0]) | q.pulse.SamplePulse(
         cr_control_samples)(cr_control_inst.channels[0])
     cr_m_schedule = q.pulse.SamplePulse(-1*cr_drive_samples)(cr_drive_inst.channels[0]) | q.pulse.SamplePulse(
