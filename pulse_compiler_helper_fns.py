@@ -106,6 +106,11 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
     assert len(cr_drive_inst) == 1 and len(cr_control_inst) == 1
     cr_control_inst = cr_control_inst[0]  # driving of control qubit at target's frequency
     cr_drive_inst = cr_drive_inst[0]  # active cancellation tone
+
+    flip = False
+    if theta < 0:
+        flip = True
+        theta = -1 * theta
     
     if theta > 2 * np.pi:
         theta -= 2 * np.pi
@@ -160,9 +165,14 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
         cr_control_samples)(cr_control_inst.channels[0])
     cr_m_schedule = q.pulse.SamplePulse(-1*cr_drive_samples)(cr_drive_inst.channels[0]) | q.pulse.SamplePulse(
         -1*cr_control_samples)(cr_control_inst.channels[0])
-    
-    schedule = cr_p_schedule
-    schedule |= cmd_def.get('x', qubits=[control]) << schedule.duration
-    schedule |= cr_m_schedule << schedule.duration
+
+    if flip:
+        schedule = cr_m_schedule
+        schedule |= cmd_def.get('x', qubits=[control]) << schedule.duration
+        schedule |= cr_p_schedule << schedule.duration
+    else:
+        schedule = cr_p_schedule
+        schedule |= cmd_def.get('x', qubits=[control]) << schedule.duration
+        schedule |= cr_m_schedule << schedule.duration
 
     return schedule
