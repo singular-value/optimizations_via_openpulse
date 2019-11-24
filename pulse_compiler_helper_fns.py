@@ -189,3 +189,16 @@ def kl_divergence(ideal_counts, actual_counts):
         if q != 0:
             kl_div += p * np.log(p / q)
     return kl_div
+
+
+def cross_entropy(ideal_counts, actual_counts):
+    """Return cross entropy between two frequency dictionaries."""
+    ideal_total = sum(ideal_counts.values())
+    actual_total = sum(actual_counts.values())
+    cross_entropy = 0
+    for k, v in ideal_counts.items():
+        p = v / ideal_total
+        q = actual_counts.get(k, 0) / actual_total
+        if q != 0:
+            cross_entropy += -p * np.log(q)
+    return cross_entropy
