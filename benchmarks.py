@@ -116,12 +116,38 @@ def get_LiH_trotter_simulation_circuit(num_trotter_steps=1, superposition_start=
     return circ
 
 
+def get_LiH_VQE(alpha, beta):
+    """LiH VQE UCCSD circuit from https://arxiv.org/pdf/1803.10238.pdf.
+    Per eq. 8, and relabeling qubits {2, 4, 6} to {1, 0, 2}, we have
+    U_UCCSD = exp(-i*alpha* Y_0 X_1) * exp(-i*beta* X_1 Y_2)
+    applied to |111>.
+    """
+    N = 3
+    circ = q.QuantumCircuit(N)
+    circ.x(0); circ.x(1); circ.x(2);  # start with |111>
+
+    #  exp(-i*beta* X_1 Y_2)
+    circ.h(1)
+    circ.sdg(2); circ.h(2)
+    circ.cx(1, 2); circ.rz(beta, 2);  circ.cx(1, 2);
+    circ.h(2); circ.s(2)
+
+    # exp(-i*alpha* Y_0 X_1)
+    circ.sdg(0); circ.h(0);
+    circ.cx(0, 1); circ.rz(alpha, 1);  circ.cx(0, 1);
+    circ.h(0); circ.s(0);
+    circ.h(1)
+
+    return circ
+
+
 def main():
-    print(get_line_maxcut_qaoa_circuit(4))
-    print(get_H2O_trotter_simulation_circuit())
-    print(get_H2_trotter_simulation_circuit())
-    print(get_LiH_trotter_simulation_circuit())
-    print(get_CH4_trotter_simulation_circuit())
+    print(get_LiH_VQE(0.3, 0.4))
+    # print(get_line_maxcut_qaoa_circuit(4))
+    # print(get_H2O_trotter_simulation_circuit())
+    # print(get_H2_trotter_simulation_circuit())
+    # print(get_LiH_trotter_simulation_circuit())
+    # print(get_CH4_trotter_simulation_circuit())
 
 
 if __name__ == "__main__":
