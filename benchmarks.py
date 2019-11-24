@@ -155,14 +155,34 @@ def get_H2_VQE(theta):
     return circ
 
 
+def get_deuteron_VQE(theta, eta):
+    """Deueteron 3-qubit VQE UCCSD from https://arxiv.org/pdf/1801.03897.pdf Fig 1b.
+
+    I shifted the qubits so that the top qubit moves to the bottom--this maps well.
+    I also used the identity Ry(-eta) = Rx(-90deg) Rz(-eta) Rx(90deg)
+    to recover the ZZ Interaction."""
+    N = 3
+    circ = q.QuantumCircuit(N)
+    circ.ry(theta, 0)
+    circ.x(1)
+    circ.ry(eta, 2)
+    circ.cx(0, 1)
+    circ.rx(np.pi/2, 2)
+    circ.cx(1, 2); circ.rz(-eta, 2); circ.cx(1, 2);
+    circ.rx(-np.pi/2, 2)
+    circ.cx(2, 1)
+    return circ
+
+
 def main():
-    print(get_line_maxcut_qaoa_circuit(4))
-    print(get_H2O_trotter_simulation_circuit())
-    print(get_H2_trotter_simulation_circuit())
-    print(get_LiH_trotter_simulation_circuit())
-    print(get_CH4_trotter_simulation_circuit())
-    print(get_LiH_VQE(0.3, 0.4))
-    print(get_H2_VQE(0.3))
+    # print(get_line_maxcut_qaoa_circuit(4))
+    # print(get_H2O_trotter_simulation_circuit())
+    # print(get_H2_trotter_simulation_circuit())
+    # print(get_LiH_trotter_simulation_circuit())
+    # print(get_CH4_trotter_simulation_circuit())
+    # print(get_LiH_VQE(0.3, 0.4))
+    # print(get_H2_VQE(0.3))
+    print(get_deuteron_VQE(0.3, 0.4))
 
 
 if __name__ == "__main__":
