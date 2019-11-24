@@ -141,13 +141,28 @@ def get_LiH_VQE(alpha, beta):
     return circ
 
 
+def get_H2_VQE(theta):
+    """H2 VQE UCCSD from https://arxiv.org/pdf/1512.06860.pdf Fig 1.
+
+    I am reversing the indices from the figure."""
+    N = 2
+    circ = q.QuantumCircuit(N)
+    circ.ry(np.pi / 2, 0)
+    circ.rx(np.pi / 2, 1)
+    circ.cx(0, 1); circ.rz(theta, 1); circ.cx(0, 1)
+    circ.ry(-np.pi / 2, 0)
+    circ.rx(np.pi / 2, 1)
+    return circ
+
+
 def main():
+    print(get_line_maxcut_qaoa_circuit(4))
+    print(get_H2O_trotter_simulation_circuit())
+    print(get_H2_trotter_simulation_circuit())
+    print(get_LiH_trotter_simulation_circuit())
+    print(get_CH4_trotter_simulation_circuit())
     print(get_LiH_VQE(0.3, 0.4))
-    # print(get_line_maxcut_qaoa_circuit(4))
-    # print(get_H2O_trotter_simulation_circuit())
-    # print(get_H2_trotter_simulation_circuit())
-    # print(get_LiH_trotter_simulation_circuit())
-    # print(get_CH4_trotter_simulation_circuit())
+    print(get_H2_VQE(0.3))
 
 
 if __name__ == "__main__":
