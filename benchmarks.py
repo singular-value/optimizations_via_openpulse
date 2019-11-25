@@ -61,11 +61,10 @@ def get_H2O_trotter_simulation_circuit(num_trotter_steps=1, superposition_start=
 
     
     for _ in range(num_trotter_steps):
-        circ.rz(8.649346371694238 / num_trotter_steps, 1)
-
+        circ.rz(8.649346371694238 / num_trotter_steps, 0)
+        circ.rz(1.1849141858184884 / num_trotter_steps, 1)
         circ.zz_interaction(8.649346371694238 / num_trotter_steps, 0, 1)
 
-        circ.rz(1.1849141858184884 / num_trotter_steps, 1)
     
     return circ
 
