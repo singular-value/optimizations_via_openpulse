@@ -35,11 +35,11 @@ def get_CH4_trotter_simulation_circuit(num_trotter_steps=1, superposition_start=
             circ.h(i)
     
     for _ in range(num_trotter_steps):
-        circ.rz(1.8095454182113748 / num_trotter_steps, 1)
+        circ.rz(1.8095454182113748 / num_trotter_steps, 0)
+        circ.rz(0.8752795188418716 / num_trotter_steps, 1)
 
         circ.zz_interaction(1.8095454182113748 / num_trotter_steps, 0, 1)
 
-        circ.rz(0.8752795188418716 / num_trotter_steps, 1)
 
     return circ
 
