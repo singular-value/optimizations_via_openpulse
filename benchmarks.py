@@ -125,6 +125,8 @@ def get_LiH_VQE(alpha, beta):
     circ = q.QuantumCircuit(N)
     circ.x(0); circ.x(1); circ.x(2);  # start with |111>
 
+    # note that two inner H's on qubit 1 cancel out
+
     #  exp(-i*beta* X_1 Y_2)
     circ.h(1)
     circ.sdg(2); circ.h(2)
