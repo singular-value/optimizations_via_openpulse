@@ -2,27 +2,27 @@ import numpy as np
 import qiskit as q
 
 
-def update_basis_gates_and_cmd_def(decomposed_circuit, backend, system, cmd_def):
-    """While Parametrized Schedules are not supported, simply update basis gates and cmd_def."""
+def update_basis_gates_and_circ_inst_map(decomposed_circuit, backend, circ_inst_map):
+    """While Parametrized Schedules are not supported, simply update basis gates and circ_inst_map."""
     basis_gates = backend.configuration().basis_gates
     for instruction, qargs, cargs in decomposed_circuit.data:
         if instruction.name.startswith('direct_rx'):
             if instruction.name not in basis_gates:
                 basis_gates.append(instruction.name)
             
-            if not cmd_def.has(instruction.name, qubits=[qargs[0].index]):
+            if not circ_inst_map.has(instruction.name, qubits=[qargs[0].index]):
                 theta = float(instruction.name[len('direct_rx_'):])
-                schedule = get_direct_rx_schedule(theta, qargs[0].index, cmd_def, system)
-                cmd_def.add(instruction.name, qubits=[qargs[0].index], schedule=schedule)
+                schedule = get_direct_rx_schedule(theta, qargs[0].index, circ_inst_map, backend)
+                circ_inst_map.add(instruction.name, qubits=[qargs[0].index], schedule=schedule)
 
         elif instruction.name.startswith('cr'):
             if instruction.name not in basis_gates:
                 basis_gates.append(instruction.name)
 
-            if not cmd_def.has(instruction.name, qubits=[qargs[0].index, qargs[1].index]):
+            if not circ_inst_map.has(instruction.name, qubits=[qargs[0].index, qargs[1].index]):
                 theta = float(instruction.name[len('cr_'):])
-                schedule = get_cr_schedule(theta, qargs[0].index, qargs[1].index, cmd_def, system)
-                cmd_def.add(instruction.name,
+                schedule = get_cr_schedule(theta, qargs[0].index, qargs[1].index, circ_inst_map, backend)
+                circ_inst_map.add(instruction.name,
                             qubits=[qargs[0].index, qargs[1].index], schedule=schedule)
 
         elif instruction.name == 'open_cx':
@@ -72,8 +72,8 @@ def _rescale_height_and_width(samples, scale_factor):
     return rescaled_samples
 
 
-def get_direct_rx_schedule(theta, qubit_index, cmd_def, system):
-    x_instructions = cmd_def.get('x', qubits=[qubit_index]).instructions
+def get_direct_rx_schedule(theta, qubit_index, circ_inst_map, backend):
+    x_instructions = circ_inst_map.get('x', qubits=[qubit_index]).instructions
     assert len(x_instructions) == 1
     x_samples = x_instructions[0][1].command.samples
     area_under_curve = sum(map(np.real, x_samples))
@@ -83,12 +83,13 @@ def get_direct_rx_schedule(theta, qubit_index, cmd_def, system):
     
     direct_rx_samples = rescale_samples(x_samples, (theta / np.pi))
     direct_rx_samplepulse = q.pulse.SamplePulse(direct_rx_samples)
-    direct_rx_command = direct_rx_samplepulse(system.drives[qubit_index])
+    direct_rx_command = direct_rx_samplepulse(backend.configuration().drive(qubit_index))
+    return q.pulse.Schedule([0, direct_rx_command])
 
     return direct_rx_command
 
 
-def get_cr_schedule(theta, control, target, cmd_def, system):
+def get_cr_schedule(theta, control, target, circ_inst_map, backend):
 
     """Returns schedule for a cross-resonance pulse between control and target.
     Does a RX(-theta) on target if control is |0> and a RX(theta) on target if
@@ -96,8 +97,8 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
     Crashes if the backend does not support CR between control and target
     (either because no connectivity, or because the CR is between target and control)
     """
-    cx_instructions = cmd_def.get('cx', qubits=[control, target]).instructions
-    xc_instructions = cmd_def.get('cx', qubits=[target, control]).instructions
+    cx_instructions = circ_inst_map.get('cx', qubits=[control, target]).instructions
+    xc_instructions = circ_inst_map.get('cx', qubits=[target, control]).instructions
     assert len(cx_instructions) < len(xc_instructions), 'CR pulse is on flipped indices'
     
     cr_control_inst = [inst for (_, inst) in cx_instructions if 'CR90p' in inst.name and inst.channels[0].name.startswith('u')]
@@ -168,11 +169,11 @@ def get_cr_schedule(theta, control, target, cmd_def, system):
 
     if flip:
         schedule = cr_m_schedule
-        schedule |= cmd_def.get('x', qubits=[control]) << schedule.duration
+        schedule |= circ_inst_map.get('x', qubits=[control]) << schedule.duration
         schedule |= cr_p_schedule << schedule.duration
     else:
         schedule = cr_p_schedule
-        schedule |= cmd_def.get('x', qubits=[control]) << schedule.duration
+        schedule |= circ_inst_map.get('x', qubits=[control]) << schedule.duration
         schedule |= cr_m_schedule << schedule.duration
 
     return schedule
